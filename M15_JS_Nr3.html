@@ -56,7 +56,7 @@
             flex-direction: row;
         }
 
-        .massage-field {
+        .message-field {
             margin-right: 5px;
             min-height: 300px;
             border: #BAD7EC solid 1px; 
@@ -87,14 +87,91 @@
             <button class="btn send">Send</button>
             <button class="btn geolocation">Geolocation</button>
         </div>
-        <div class="massage-field">
-            <div class="message message-own">this is my message</div>
-            <div class="message message-other">other</div>
+        <div class="message-field">
         </div>
     </div>
 
     <script>
-        
+        // Chat functionality
+        const url = "wss://echo-ws-service.herokuapp.com/";
+
+        // create websocket
+        let websocket = new WebSocket(url);
+        websocket.onopen = function(evt) {
+            console.log('Connected');
+        };
+        websocket.onclose = function(evt) {
+            console.log('Disconnected');
+        };
+        websocket.onerror = function(evt) {
+            console.log('ERROR: ' + evt.data);
+        };
+        // process returned messages
+        websocket.onmessage = function(evt) {
+            // evt.data get returned message
+            createMsg(evt.data, false);
+        };
+
+        // close connection to the websocket, when window close
+        window.onbeforeunload = function() {
+            websocket.close();
+            websocket = null;
+        }
+
+        const btnSend = document.querySelector('.send');
+        const inputField = document.querySelector('input');
+        const messageField = document.querySelector('.message-field');
+
+        btnSend.addEventListener('click', () => {
+            // read input field
+            const msgText = inputField.value;
+            // if nothing was written => return (nothing to do)
+            if(msgText === null || msgText === '') return;
+
+            // create message in chat
+            createMsg(msgText, true);
+
+            sendMessage(msgText);
+        });
+
+        function createMsg(msg, isOwnMessage) {
+            const msgElement = document.createElement('div');
+            msgElement.innerHTML = msg;
+            msgElement.classList.add('message');
+            msgElement.classList.add(isOwnMessage ? 'message-own' : 'message-other');
+            messageField.appendChild(msgElement);
+            inputField.innerHTML = '';
+        }
+
+        // send msg with webSocket
+        function sendMessage(msg){
+            websocket.send(msg);
+        }
+
+        // Geolocation functionality
+        const btnGeo = document.querySelector('.geolocation');
+
+        function error() {
+            createMsg('Problem with your position', false);
+        }
+
+        function success(position) {
+            const latitude  = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            const mapLink = `https://www.openstreetmap.org/query?lat=${latitude}&lon=${longitude}`
+            const a = `<a href="${mapLink}">Geo</a>`
+            sendMessage(a, false);
+        }
+
+        btnGeo.addEventListener('click', () => {
+            if(!navigator.geolocation) {
+                createMsg('Your browser does not support geolocation.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(success, error);
+        });
+
     </script>
 </body>
 </html>
